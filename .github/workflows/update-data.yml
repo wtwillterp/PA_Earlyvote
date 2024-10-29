@@ -46,7 +46,7 @@ jobs:
     - name: Install R packages
       if: steps.r-cache.outputs.cache-hit != 'true'
       run: |
-        install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto'))
+        install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto', 'sysfonts', 'showtext'), type="binary")
       shell: Rscript {0}
         
     - name: Download latest PA voter data

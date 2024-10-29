@@ -4,7 +4,7 @@ format: html
 editor: visual
 ---
 
-```{r}
+```{r Setup}
 #| label: load-packages
 #| include: false
 
@@ -14,9 +14,17 @@ library(extrafont)
 library(here)
 library(openxlsx)
 library(scales)
+library(sysfonts)
+library(showtext)
+
+# Enable showtext for font rendering
+showtext_auto()
+
+# Load Space Grotesk from Google Fonts
+font_add_google("Space Grotesk")
 
 wills_minimal_theme <- function() {
-  font <- "Futura-Book"
+  font <- "Space Grotesk"
   theme_minimal() %+replace%
   theme(
     # Text
@@ -36,6 +44,14 @@ wills_minimal_theme <- function() {
     legend.position = "top"
   )
 }
+
+# More muted/professional party colors
+party_colors <- c(
+  "Dem Ballots Returned" = "#2E74C0",    # Muted Democratic Blue
+  "Rep Ballots Returned" = "#C23B22",    # Muted Republican Red
+  "Ind Ballots Returned" = "#6B4E71"     # Muted Purple
+)
+
 ```
 
 ## Pennsylvania Early Voting Results
@@ -101,3 +117,50 @@ Dem_lead_w_assump_df <- PA_df %>%
 
 Dem_lead_w_assump_df
 ```
+
+```{r Plot Ballots}
+
+PA_df %>%
+  pivot_longer(1:3, names_to = "Metric") %>%
+  mutate(value = as.numeric(value)) %>%
+  ggplot(aes(x = value, y = reorder(Metric, value), fill = Metric)) +
+  geom_col(show.legend = FALSE) +
+  scale_x_continuous(labels = \(x) scales::comma(x, prefix = "$")) +
+  scale_fill_manual(
+    values = party_colors,
+    labels = c("Democratic", "Republican", "Independent")
+  ) +
+  wills_minimal_theme() +
+  theme(axis.text.x = element_blank()) +
+  labs(title = "Ballot Returns", x = "", y = "") +
+  geom_text(
+    aes(label = if_else(
+      value <= max(value) * .75, scales::comma(value, accuracy = 1), ""
+    )),
+    hjust = -.1,
+    family = "Space Grotesk",
+    size = 12 / .pt,
+    color = "grey30"
+  ) +
+  geom_text(
+    aes(label = if_else(
+      value > max(value) * .75, scales::comma(value, accuracy = 1), ""
+    )),
+    hjust = 1.1,
+    family = "Space Grotesk",
+    size = 12 / .pt,
+    color = "white"
+  ) +
+  geom_vline(xintercept = PA_df$`Rep Ballots Returned` + necessary_firewall, color = "grey50", size = 1) +
+  geom_text(
+    aes(x = PA_df$`Rep Ballots Returned` + necessary_firewall, y = 0, label = "Firewall \n Threshold"),
+    hjust = 1.1,
+    vjust = 0,
+    family = "Space Grotesk",
+    size = 12 / .pt,
+    color = "grey50"
+  ) +
+  coord_cartesian(clip = "off")
+
+```
+
