@@ -55,7 +55,7 @@ jobs:
     
     - name: Render Quarto document
       run: |
-        quarto render PA_EV_Analysis.qmd --to html --output-file index.html --output-dir docs
+        quarto render PA_EV_Analysis.qmd --to html -o index.html --output-dir docs
         
     - name: Commit and push changes
       run: |
