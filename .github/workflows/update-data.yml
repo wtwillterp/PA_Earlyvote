@@ -11,6 +11,7 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_LIBS_USER: ${{ github.workspace }}/R/library
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
       
     steps:
     - uses: actions/checkout@v3
@@ -19,6 +20,7 @@ jobs:
       uses: r-lib/actions/setup-r@v2
       with:
         r-version: '4.2.0'
+        use-binary: true # Use pre-built binary packages
 
     - name: Cache R packages
       uses: actions/cache@v3
@@ -31,7 +33,7 @@ jobs:
       uses: quarto-dev/quarto-actions/setup@v2
       with:
         version: 1.4.549
-
+        
     - name: Cache Quarto
       uses: actions/cache@v3
       with:
@@ -46,7 +48,7 @@ jobs:
     - name: Install R packages
       if: steps.r-cache.outputs.cache-hit != 'true'
       run: |
-        install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto'))
+        install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto'), type = 'binary')
       shell: Rscript {0}
         
     - name: Download latest PA voter data
@@ -61,6 +63,6 @@ jobs:
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
-        git add docs/* "quarto_test/dev/2024 General Daily Mail Ballot Report.xlsx"
+        git add docs/* "2024 General Daily Mail Ballot Report.xlsx"
         git commit -m "Update PA voter data $(date +'%Y-%m-%d')" || echo "No changes to commit"
         git push origin main
