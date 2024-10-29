@@ -14,6 +14,28 @@ library(extrafont)
 library(here)
 library(openxlsx)
 library(scales)
+
+wills_minimal_theme <- function() {
+  font <- "Futura-Book"
+  theme_minimal() %+replace%
+  theme(
+    # Text
+    text = element_text(family = font, size = 12),
+    plot.title = element_text(family = font, size = 16, hjust = 0, margin = margin(b = 10)),
+    plot.subtitle = element_text(family = font, size = 12, hjust = 0),
+    plot.title.position = "plot",
+    plot.margin = margin(r = 35),
+    legend.title = element_blank(),
+    legend.text = element_text(margin = margin(r = 25), size = 12, color = "grey30"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    legend.spacing.x = unit(1, "mm"),
+    strip.text = element_text(color = "grey30"),
+    legend.position = "top"
+  )
+}
 ```
 
 ## Pennsylvania Early Voting Results
