@@ -3,13 +3,14 @@ name: Update PA Voter Data
 on:
   schedule:
     - cron: '0 12 * * *'  # Runs at 12:00 UTC (8:00 AM EDT) daily
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_LIBS_USER: ${{ github.workspace }}/R/library
       
     steps:
     - uses: actions/checkout@v3
@@ -19,10 +20,23 @@ jobs:
       with:
         r-version: '4.2.0'
 
+    - name: Cache R packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.R_LIBS_USER }}
+        key: ${{ runner.os }}-r-${{ hashFiles('**/packages.txt') }}-1
+        restore-keys: ${{ runner.os }}-r-
+
     - name: Install Quarto
       uses: quarto-dev/quarto-actions/setup@v2
       with:
-        version: 1.5.52
+        version: 1.4.549
+
+    - name: Cache Quarto
+      uses: actions/cache@v3
+      with:
+        path: ~/.local/share/quarto
+        key: ${{ runner.os }}-quarto-${{ hashFiles('**/*.qmd') }}
         
     - name: Install system dependencies
       run: |
@@ -30,13 +44,14 @@ jobs:
         sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev
 
     - name: Install R packages
+      if: steps.r-cache.outputs.cache-hit != 'true'
       run: |
         install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto'))
       shell: Rscript {0}
         
     - name: Download latest PA voter data
       run: |
-        wget -O "2024 General Daily Mail Ballot Report.xlsx" "https://www.pavoterservices.pa.gov/2024%20General%20Daily%20Mail%20Ballot%20Report.xlsx"
+        wget -O "quarto_test/dev/2024 General Daily Mail Ballot Report.xlsx" "https://www.pavoterservices.pa.gov/2024%20General%20Daily%20Mail%20Ballot%20Report.xlsx"
         
     - name: Render Quarto document
       run: |
@@ -46,6 +61,6 @@ jobs:
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
-        git add docs/* "2024 General Daily Mail Ballot Report.xlsx"
+        git add docs/* "quarto_test/dev/2024 General Daily Mail Ballot Report.xlsx"
         git commit -m "Update PA voter data $(date +'%Y-%m-%d')" || echo "No changes to commit"
         git push origin main

@@ -1,0 +1,81 @@
+---
+title: "Pennsylvania Early Voting Results"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: load-packages
+#| include: false
+
+library(tidyverse)
+library(ggplot2)
+library(extrafont)
+library(here)
+library(openxlsx)
+library(scales)
+```
+
+## Pennsylvania Early Voting Results
+
+Just a quick Quarto doc with a very simple analysis of current PA ballot returns.
+
+![](https://www.pa.gov/content/dam/copapwp-pagov/en/global/images/CoPA%20Logo%20-%20Horizontal%20Lockup%201.svg){style="float:center;" width="200"}
+
+The `2024 General Daily Mail Ballot Report` data is from the [**Official Website of the PA Commonwealth**](https://www.pa.gov/en/agencies/vote/elections/elections-data.html). The chunks below aggregate & plot the ballot returns data.
+
+```{r Pennsylvania Early Voting Aggregate Returns}
+#| warning: false
+#| echo: false
+
+PA_df <- read.xlsx(paste0(here::here(), "/2024 General Daily Mail Ballot Report.xlsx"), startRow = 2)
+PA_summary <- PA_df %>%
+  filter(CountyName != "TOTAL") %>%
+  mutate_at(vars(-1), as.numeric) %>%
+  summarize(across(is.numeric, ~ sum(., na.rm = TRUE))) %>% 
+  mutate(Type = "Temp") %>% 
+  pivot_longer(!Type) %>%
+  separate(col = name, into = c("Type", "Stat"), sep = "\\.") %>%
+  pivot_wider(names_from = Stat, values_from = value)
+
+PA_summary %>% mutate(`% Returned` = scales::percent(`Ballots`/ `Applications`))
+```
+
+```{r Pennsylvania Early Voting Calculations}
+# Stolen from a twitter user who I'm sure knows what they are talking about
+# "It came to me in a dream / astrology tier politics"
+T1 <- 6955450  # Total voter turnout based on 2020
+EV <- 1878119  # Total EV's based on projections
+V1 <- 0.5438  # Expected Republican vote percentage ED (54.38%)
+V2 <- 0.4322  # Expected Democratic vote percentage ED (43.22%)
+necessary_firewall <- ((T1 - EV) * V1) - ((T1 - EV) * V2)
+
+PA_df <- tibble("Dem Ballots Returned" = PA_summary %>% filter(Type == "Dem") %>% pull(Ballots),
+                   "Rep Ballots Returned" = PA_summary %>% filter(Type == "Rep") %>% pull(Ballots),
+                   "Ind Ballots Returned" = PA_summary %>% filter(Type == "Oth") %>% pull(Ballots))
+
+Dem_lead_df <- PA_df %>%
+  mutate(`Dem lead` = `Dem Ballots Returned` - `Rep Ballots Returned`) %>%
+  mutate(`Dem lead %` =  scales::percent((`Dem Ballots Returned` - `Rep Ballots Returned`)/`Rep Ballots Returned`)) %>%
+  mutate(`% Firewall` =  scales::percent((`Dem Ballots Returned`- `Rep Ballots Returned`)/necessary_firewall,.1)) %>%
+  mutate(across(is.numeric, ~scales::comma(.)))
+
+Dem_lead_df
+```
+
+```{r Pennsylvania Early Voting With Independent Assumptions Incorporated}
+
+assume_dem_indp_net_edge <- 8
+assume_dem_prop_of_indp <- ((1-assume_dem_indp_net_edge/100)/2)+assume_dem_indp_net_edge/100
+
+Dem_lead_w_assump_df <- PA_df %>%
+  mutate(`Dem Ballots Returned` = `Dem Ballots Returned` + `Ind Ballots Returned` * assume_dem_prop_of_indp,
+         `Rep Ballots Returned` = `Rep Ballots Returned` + `Ind Ballots Returned` * (1-assume_dem_prop_of_indp)) %>%
+  mutate(`Dem lead` = `Dem Ballots Returned` - `Rep Ballots Returned`) %>%
+  mutate(`Dem lead %` =  scales::percent((`Dem Ballots Returned` - `Rep Ballots Returned`)/`Rep Ballots Returned`)) %>%
+  mutate(`% Firewall` =  scales::percent((`Dem Ballots Returned`- `Rep Ballots Returned`)/necessary_firewall,.1)) %>%
+  mutate(across(is.numeric, ~scales::comma(.))) %>%
+  select(-`Ind Ballots Returned`)
+
+Dem_lead_w_assump_df
+```
