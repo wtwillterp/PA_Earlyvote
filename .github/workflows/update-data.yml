@@ -51,7 +51,7 @@ jobs:
         
     - name: Download latest PA voter data
       run: |
-        wget -O "quarto_test/dev/2024 General Daily Mail Ballot Report.xlsx" "https://www.pavoterservices.pa.gov/2024%20General%20Daily%20Mail%20Ballot%20Report.xlsx"
+        wget -O "2024 General Daily Mail Ballot Report.xlsx" "https://www.pavoterservices.pa.gov/2024%20General%20Daily%20Mail%20Ballot%20Report.xlsx"
         
     - name: Render Quarto document
       run: |
