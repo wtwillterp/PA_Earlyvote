@@ -20,40 +20,6 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
 </style>
 
 
@@ -96,122 +62,70 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="pennsylvania-early-voting-results" class="level2">
-<h2 class="anchored" data-anchor-id="pennsylvania-early-voting-results">Pennsylvania Early Voting Results</h2>
 <p>Just a quick Quarto doc with a very simple analysis of current PA ballot returns.</p>
 <p><img src="https://www.pa.gov/content/dam/copapwp-pagov/en/global/images/CoPA%20Logo%20-%20Horizontal%20Lockup%201.svg" class="img-fluid" style="float:center;" width="200"></p>
 <p>The <code>2024 General Daily Mail Ballot Report</code> data is from the <a href="https://www.pa.gov/en/agencies/vote/elections/elections-data.html"><strong>Official Website of the PA Commonwealth</strong></a>. The chunks below aggregate &amp; plot the ballot returns data.</p>
-<div class="cell">
+<section id="ballots-returned" class="level2">
+<h2 class="anchored" data-anchor-id="ballots-returned">Ballots Returned</h2>
+<div class="cell" data-layout-align="center">
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 4
   Type  Applications Ballots `% Returned`
   &lt;chr&gt;        &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;       
-1 Total      2133955 1473825 69.07%      
-2 Dem        1177242  849849 72.19%      
-3 Rep         685011  468067 68.33%      
-4 Oth         271702  155909 57.38%      </code></pre>
+1 Total      2186450 1550128 70.90%      
+2 Dem        1196132  881779 73.72%      
+3 Rep         710222  501736 70.64%      
+4 Oth         280096  166613 59.48%      </code></pre>
 </div>
 </div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Stolen from a twitter user who I'm sure knows what they are talking about</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># "It came to me in a dream / astrology tier politics"</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>T1 <span class="ot">&lt;-</span> <span class="dv">6955450</span>  <span class="co"># Total voter turnout based on 2020</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>EV <span class="ot">&lt;-</span> <span class="dv">1878119</span>  <span class="co"># Total EV's based on projections</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>V1 <span class="ot">&lt;-</span> <span class="fl">0.5438</span>  <span class="co"># Expected Republican vote percentage ED (54.38%)</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>V2 <span class="ot">&lt;-</span> <span class="fl">0.4322</span>  <span class="co"># Expected Democratic vote percentage ED (43.22%)</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>necessary_firewall <span class="ot">&lt;-</span> ((T1 <span class="sc">-</span> EV) <span class="sc">*</span> V1) <span class="sc">-</span> ((T1 <span class="sc">-</span> EV) <span class="sc">*</span> V2)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>PA_df <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="st">"Dem Ballots Returned"</span> <span class="ot">=</span> PA_summary <span class="sc">%&gt;%</span> <span class="fu">filter</span>(Type <span class="sc">==</span> <span class="st">"Dem"</span>) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(Ballots),</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>                   <span class="st">"Rep Ballots Returned"</span> <span class="ot">=</span> PA_summary <span class="sc">%&gt;%</span> <span class="fu">filter</span>(Type <span class="sc">==</span> <span class="st">"Rep"</span>) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(Ballots),</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>                   <span class="st">"Ind Ballots Returned"</span> <span class="ot">=</span> PA_summary <span class="sc">%&gt;%</span> <span class="fu">filter</span>(Type <span class="sc">==</span> <span class="st">"Oth"</span>) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(Ballots))</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>Dem_lead_df <span class="ot">&lt;-</span> PA_df <span class="sc">%&gt;%</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Dem lead</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span> <span class="sc">-</span> <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Dem lead %</span><span class="st">`</span> <span class="ot">=</span>  scales<span class="sc">::</span><span class="fu">percent</span>((<span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span> <span class="sc">-</span> <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>)<span class="sc">/</span><span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">% Firewall</span><span class="st">`</span> <span class="ot">=</span>  scales<span class="sc">::</span><span class="fu">percent</span>((<span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span><span class="sc">-</span> <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>)<span class="sc">/</span>necessary_firewall,.<span class="dv">1</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(is.numeric, <span class="sc">~</span>scales<span class="sc">::</span><span class="fu">comma</span>(.)))</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>Dem_lead_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="ballot-calculations" class="level2">
+<h2 class="anchored" data-anchor-id="ballot-calculations">Ballot Calculations</h2>
+<div class="cell" data-layout-align="center">
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 1 × 6
+<pre><code># A tibble: 1 × 3
   `Dem Ballots Returned` `Rep Ballots Returned` `Ind Ballots Returned`
   &lt;chr&gt;                  &lt;chr&gt;                  &lt;chr&gt;                 
-1 849,849                468,067                155,909               
-# ℹ 3 more variables: `Dem lead` &lt;chr&gt;, `Dem lead %` &lt;chr&gt;, `% Firewall` &lt;chr&gt;</code></pre>
+1 881,779                501,736                166,613               </code></pre>
 </div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>assume_dem_indp_net_edge <span class="ot">&lt;-</span> <span class="dv">8</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>assume_dem_prop_of_indp <span class="ot">&lt;-</span> ((<span class="dv">1</span><span class="sc">-</span>assume_dem_indp_net_edge<span class="sc">/</span><span class="dv">100</span>)<span class="sc">/</span><span class="dv">2</span>)<span class="sc">+</span>assume_dem_indp_net_edge<span class="sc">/</span><span class="dv">100</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>Dem_lead_w_assump_df <span class="ot">&lt;-</span> PA_df <span class="sc">%&gt;%</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span> <span class="sc">+</span> <span class="st">`</span><span class="at">Ind Ballots Returned</span><span class="st">`</span> <span class="sc">*</span> assume_dem_prop_of_indp,</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span> <span class="sc">+</span> <span class="st">`</span><span class="at">Ind Ballots Returned</span><span class="st">`</span> <span class="sc">*</span> (<span class="dv">1</span><span class="sc">-</span>assume_dem_prop_of_indp)) <span class="sc">%&gt;%</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Dem lead</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span> <span class="sc">-</span> <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Dem lead %</span><span class="st">`</span> <span class="ot">=</span>  scales<span class="sc">::</span><span class="fu">percent</span>((<span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span> <span class="sc">-</span> <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>)<span class="sc">/</span><span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">% Firewall</span><span class="st">`</span> <span class="ot">=</span>  scales<span class="sc">::</span><span class="fu">percent</span>((<span class="st">`</span><span class="at">Dem Ballots Returned</span><span class="st">`</span><span class="sc">-</span> <span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span>)<span class="sc">/</span>necessary_firewall,.<span class="dv">1</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(is.numeric, <span class="sc">~</span>scales<span class="sc">::</span><span class="fu">comma</span>(.))) <span class="sc">%&gt;%</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="st">`</span><span class="at">Ind Ballots Returned</span><span class="st">`</span>)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>Dem_lead_w_assump_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 1 × 5
-  `Dem Ballots Returned` `Rep Ballots Returned` `Dem lead` `Dem lead %`
-  &lt;chr&gt;                  &lt;chr&gt;                  &lt;chr&gt;      &lt;chr&gt;       
-1 934,040                539,785                394,255    73%         
-# ℹ 1 more variable: `% Firewall` &lt;chr&gt;</code></pre>
+<pre><code># A tibble: 1 × 2
+  `Dem lead` `Dem lead %`
+  &lt;chr&gt;      &lt;chr&gt;       
+1 380,043    76%         </code></pre>
 </div>
 </div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>PA_df <span class="sc">%&gt;%</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="at">names_to =</span> <span class="st">"Metric"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">value =</span> <span class="fu">as.numeric</span>(value)) <span class="sc">%&gt;%</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> value, <span class="at">y =</span> <span class="fu">reorder</span>(Metric, value), <span class="at">fill =</span> Metric)) <span class="sc">+</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> \(x) scales<span class="sc">::</span><span class="fu">comma</span>(x, <span class="at">prefix =</span> <span class="st">"$"</span>)) <span class="sc">+</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> party_colors,</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Democratic"</span>, <span class="st">"Republican"</span>, <span class="st">"Independent"</span>)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wills_minimal_theme</span>() <span class="sc">+</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_blank</span>()) <span class="sc">+</span></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Ballot Returns"</span>, <span class="at">x =</span> <span class="st">""</span>, <span class="at">y =</span> <span class="st">""</span>) <span class="sc">+</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">if_else</span>(</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>      value <span class="sc">&lt;=</span> <span class="fu">max</span>(value) <span class="sc">*</span> .<span class="dv">75</span>, scales<span class="sc">::</span><span class="fu">comma</span>(value, <span class="at">accuracy =</span> <span class="dv">1</span>), <span class="st">""</span></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    )),</span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">hjust =</span> <span class="sc">-</span>.<span class="dv">1</span>,</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> <span class="st">"Space Grotesk"</span>,</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="dv">12</span> <span class="sc">/</span> .pt,</span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"grey30"</span></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">if_else</span>(</span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>      value <span class="sc">&gt;</span> <span class="fu">max</span>(value) <span class="sc">*</span> .<span class="dv">75</span>, scales<span class="sc">::</span><span class="fu">comma</span>(value, <span class="at">accuracy =</span> <span class="dv">1</span>), <span class="st">""</span></span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    )),</span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">hjust =</span> <span class="fl">1.1</span>,</span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> <span class="st">"Space Grotesk"</span>,</span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="dv">12</span> <span class="sc">/</span> .pt,</span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"white"</span></span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> PA_df<span class="sc">$</span><span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span> <span class="sc">+</span> necessary_firewall, <span class="at">color =</span> <span class="st">"grey50"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> PA_df<span class="sc">$</span><span class="st">`</span><span class="at">Rep Ballots Returned</span><span class="st">`</span> <span class="sc">+</span> necessary_firewall, <span class="at">y =</span> <span class="dv">0</span>, <span class="at">label =</span> <span class="st">"Firewall </span><span class="sc">\n</span><span class="st"> Threshold"</span>),</span>
-<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">hjust =</span> <span class="fl">1.1</span>,</span>
-<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">vjust =</span> <span class="dv">0</span>,</span>
-<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">family =</span> <span class="st">"Space Grotesk"</span>,</span>
-<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="dv">12</span> <span class="sc">/</span> .pt,</span>
-<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"grey50"</span></span>
-<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">clip =</span> <span class="st">"off"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-ℹ Please use `linewidth` instead.</code></pre>
+</section>
+<section id="ballot-calculations-incorporating-potential-indepedents-split" class="level2">
+<h2 class="anchored" data-anchor-id="ballot-calculations-incorporating-potential-indepedents-split">Ballot Calculations Incorporating Potential Indepedents Split</h2>
+<div class="cell" data-layout-align="center">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 3
+  `Dem Ballots Returned` `Rep Ballots Returned` `Dem lead`
+  &lt;chr&gt;                  &lt;chr&gt;                  &lt;chr&gt;     
+1 971,750                578,378                393,372   </code></pre>
 </div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 2
+  `Dem lead %` `% Firewall`
+  &lt;chr&gt;        &lt;chr&gt;       
+1 68%          69.4%       </code></pre>
+</div>
+</div>
+</section>
+<section id="pa-early-voting-barplot" class="level2">
+<h2 class="anchored" data-anchor-id="pa-early-voting-barplot">PA Early Voting Barplot</h2>
+<p><a href="#fig-ballots" class="quarto-xref">Figure&nbsp;1</a> visualizes current ballot returns.</p>
+<div class="cell" data-layout-align="center">
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="PA_EV_Analysis_files/figure-html/Plot%20Ballots-1.png" class="img-fluid figure-img" width="672"></p>
+<div id="fig-ballots" class="quarto-figure quarto-figure-center quarto-float anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ballots-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="PA_EV_Analysis_files/figure-html/fig-ballots-1.svg" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ballots-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: PA early ballot returns 2024.
+</figcaption>
 </figure>
 </div>
 </div>
