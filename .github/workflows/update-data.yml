@@ -5,6 +5,10 @@ on:
     - cron: '30 13 * * *'  # Fixed cron syntax
   workflow_dispatch:
 
+permissions:
+  issues: write
+  contents: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -42,6 +46,7 @@ jobs:
       - name: Create Issue about Skipped Run
         uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const skipReason = '${{ needs.check-run-conditions.outputs.skip_reason }}';
             await github.rest.issues.create({
@@ -92,6 +97,7 @@ jobs:
       shell: Rscript {0}
         
     - name: Download and check PA voter data
+      timeout-minutes: 5
       run: |
         # Save old file hash if it exists
         if [ -f "2024 General Daily Mail Ballot Report.xlsx" ]; then
@@ -101,6 +107,12 @@ jobs:
         # Download new file to temp location
         wget -O "temp_ballot_report.xlsx" "https://www.pavoterservices.pa.gov/2024%20General%20Daily%20Mail%20Ballot%20Report.xlsx"
         NEW_HASH=$(md5sum "temp_ballot_report.xlsx" | awk '{ print $1 }')
+        
+        # Check if file is empty
+        if [ $(stat -f%z "temp_ballot_report.xlsx") -eq 0 ]; then
+          echo "::error::Downloaded file is empty"
+          exit 1
+        fi
         
         if [ ! -f "2024 General Daily Mail Ballot Report.xlsx" ] || [ "$OLD_HASH" != "$NEW_HASH" ]; then
           mv "temp_ballot_report.xlsx" "2024 General Daily Mail Ballot Report.xlsx"
@@ -116,6 +128,7 @@ jobs:
       if: failure() && env.no_update == 'true'
       uses: actions/github-script@v6
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           await github.rest.issues.create({
             owner: context.repo.owner,
@@ -140,6 +153,7 @@ jobs:
       if: failure()
       uses: actions/github-script@v6
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           await github.rest.issues.create({
             owner: context.repo.owner,
