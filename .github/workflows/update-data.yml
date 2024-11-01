@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  issues: write
   contents: write
 
 concurrency:
@@ -35,26 +34,9 @@ jobs:
             else
               echo "should_run=false" >> $GITHUB_OUTPUT
               echo "skip_reason=Election period has ended (after Nov 5, 2024)" >> $GITHUB_OUTPUT
+              echo "::warning::Skipping run: Election period has ended (after Nov 5, 2024)"
             fi
           fi
-
-  notify-skip:
-    needs: check-run-conditions
-    if: needs.check-run-conditions.outputs.should_run == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create Issue about Skipped Run
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const skipReason = '${{ needs.check-run-conditions.outputs.skip_reason }}';
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.name,
-              title: '⚠️ PA Voter Data Update Skipped',
-              body: `The workflow was skipped for the following reason:\n\n${skipReason}\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}`
-            });
 
   update-data:
     needs: check-run-conditions
@@ -66,7 +48,7 @@ jobs:
       R_LIBS_USER: ${{ github.workspace }}/R/library
       
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
         
     - name: Setup R
       uses: r-lib/actions/setup-r@v2
@@ -74,7 +56,7 @@ jobs:
         r-version: '4.2.0'
         
     - name: Cache R packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ env.R_LIBS_USER }}
         key: ${{ runner.os }}-r-${{ hashFiles('**/packages.txt') }}-1
@@ -109,7 +91,7 @@ jobs:
         NEW_HASH=$(md5sum "temp_ballot_report.xlsx" | awk '{ print $1 }')
         
         # Check if file is empty
-        if [ $(stat -f%z "temp_ballot_report.xlsx") -eq 0 ]; then
+        if [ ! -s "temp_ballot_report.xlsx" ]; then
           echo "::error::Downloaded file is empty"
           exit 1
         fi
@@ -119,23 +101,9 @@ jobs:
           echo "New data file detected and saved"
         else
           rm "temp_ballot_report.xlsx"
-          echo "no_update=true" >> $GITHUB_ENV
-          echo "::error::No new voter data available - file unchanged"
+          echo "::warning::No new voter data available - file unchanged"
           exit 1
         fi
-
-    - name: Create Issue for Unchanged Data
-      if: failure() && env.no_update == 'true'
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          await github.rest.issues.create({
-            owner: context.repo.owner,
-            repo: context.repo.name,
-            title: '⚠️ PA Voter Data Unchanged',
-            body: `The voter data file has not changed since the last update.\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}`
-          });
         
     - name: Render Quarto document
       run: |
@@ -148,16 +116,3 @@ jobs:
         git add docs/* "2024 General Daily Mail Ballot Report.xlsx"
         git commit -m "Update PA voter data $(date +'%Y-%m-%d')" || echo "No changes to commit"
         git push origin main
-
-    - name: Create Issue on Failure
-      if: failure()
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          await github.rest.issues.create({
-            owner: context.repo.owner,
-            repo: context.repo.name,
-            title: '❌ PA Voter Data Update Failed',
-            body: `The workflow failed during execution.\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}\n\nPlease check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId}) for more details.`
-          });
