@@ -49,36 +49,9 @@ jobs:
       
     steps:
     - uses: actions/checkout@v4
-        
-    - name: Setup R
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: '4.2.0'
-        
-    - name: Cache R packages
-      uses: actions/cache@v4
-      with:
-        path: ${{ env.R_LIBS_USER }}
-        key: ${{ runner.os }}-r-${{ hashFiles('**/packages.txt') }}-1
-        restore-keys: ${{ runner.os }}-r-
-        
-    - name: Install Quarto
-      uses: quarto-dev/quarto-actions/setup@v2
-      with:
-        version: 1.4.549
-        
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev
-        
-    - name: Install R packages
-      if: steps.r-cache.outputs.cache-hit != 'true'
-      run: |
-        install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto', 'sysfonts', 'showtext'))
-      shell: Rscript {0}
-        
+    
     - name: Download and check PA voter data
+      id: check-data
       timeout-minutes: 5
       run: |
         # Save old file hash if it exists
@@ -93,23 +66,59 @@ jobs:
         # Check if file is empty
         if [ ! -s "temp_ballot_report.xlsx" ]; then
           echo "::error::Downloaded file is empty"
+          rm "temp_ballot_report.xlsx"
           exit 1
         fi
         
         if [ ! -f "2024 General Daily Mail Ballot Report.xlsx" ] || [ "$OLD_HASH" != "$NEW_HASH" ]; then
           mv "temp_ballot_report.xlsx" "2024 General Daily Mail Ballot Report.xlsx"
+          echo "has_updates=true" >> $GITHUB_OUTPUT
           echo "New data file detected and saved"
         else
           rm "temp_ballot_report.xlsx"
           echo "::warning::No new voter data available - file unchanged"
-          exit 1
+          exit 0
         fi
+
+    - name: Setup R
+      if: steps.check-data.outputs.has_updates == 'true'
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.2.0'
+        
+    - name: Cache R packages
+      if: steps.check-data.outputs.has_updates == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.R_LIBS_USER }}
+        key: ${{ runner.os }}-r-${{ hashFiles('**/packages.txt') }}-1
+        restore-keys: ${{ runner.os }}-r-
+        
+    - name: Install Quarto
+      if: steps.check-data.outputs.has_updates == 'true'
+      uses: quarto-dev/quarto-actions/setup@v2
+      with:
+        version: 1.4.549
+        
+    - name: Install system dependencies
+      if: steps.check-data.outputs.has_updates == 'true'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev
+        
+    - name: Install R packages
+      if: steps.check-data.outputs.has_updates == 'true' && steps.r-cache.outputs.cache-hit != 'true'
+      run: |
+        install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto', 'sysfonts', 'showtext'))
+      shell: Rscript {0}
         
     - name: Render Quarto document
+      if: steps.check-data.outputs.has_updates == 'true'
       run: |
         quarto render PA_EV_Analysis.qmd --to html -o index.html --output-dir docs
         
     - name: Commit and push changes
+      if: steps.check-data.outputs.has_updates == 'true'
       run: |
         git config --local user.email "actions@github.com"
         git config --local user.name "GitHub Actions"
