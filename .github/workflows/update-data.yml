@@ -2,15 +2,55 @@ name: Update PA Voter Data
 
 on:
   schedule:
-    - cron: '30 13 * * *'  # Runs at 12:00 UTC (8:00 AM EDT) daily
-  workflow_dispatch:  # Allows manual trigger
+    - cron: '30 13 * * *'  # Fixed cron syntax
+  workflow_dispatch:
 
 jobs:
-  update-data:
+  check-run-conditions:
     runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check-date.outputs.should_run }}
+      skip_reason: ${{ steps.check-date.outputs.skip_reason }}
     
-    # Add condition to check if current date is before Nov 5, 2024
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule.timestamp < '2024-11-06T00:00:00Z') }}
+    steps:
+      - id: check-date
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "skip_reason=none" >> $GITHUB_OUTPUT
+          else
+            current_date=$(date -u +%s)
+            cutoff_date=$(date -u -d "2024-11-06" +%s)
+            if [[ $current_date -lt $cutoff_date ]]; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+              echo "skip_reason=none" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+              echo "skip_reason=Election period has ended (after Nov 5, 2024)" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  notify-skip:
+    needs: check-run-conditions
+    if: needs.check-run-conditions.outputs.should_run == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Issue about Skipped Run
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const skipReason = '${{ needs.check-run-conditions.outputs.skip_reason }}';
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              title: '⚠️ PA Voter Data Update Skipped',
+              body: `The workflow was skipped for the following reason:\n\n${skipReason}\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}`
+            });
+
+  update-data:
+    needs: check-run-conditions
+    if: needs.check-run-conditions.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
     
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -36,11 +76,94 @@ jobs:
       with:
         version: 1.4.549
         
-    - name: Cache Quarto
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev
+        
+    - name: Install R packages
+      if: steps.r-cache.outputs.cache-hit != 'true'
+      run: |
+        install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto', 'sysfonts', 'showtext'))
+      shell: Rscript {0}
+        
+    name: Update PA Voter Data
+
+on:
+  schedule:
+    - cron: '30 13 * * *'  # Fixed cron syntax
+  workflow_dispatch:
+
+jobs:
+  check-run-conditions:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check-date.outputs.should_run }}
+      skip_reason: ${{ steps.check-date.outputs.skip_reason }}
+    
+    steps:
+      - id: check-date
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "skip_reason=none" >> $GITHUB_OUTPUT
+          else
+            current_date=$(date -u +%s)
+            cutoff_date=$(date -u -d "2024-11-06" +%s)
+            if [[ $current_date -lt $cutoff_date ]]; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+              echo "skip_reason=none" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+              echo "skip_reason=Election period has ended (after Nov 5, 2024)" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  notify-skip:
+    needs: check-run-conditions
+    if: needs.check-run-conditions.outputs.should_run == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Issue about Skipped Run
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const skipReason = '${{ needs.check-run-conditions.outputs.skip_reason }}';
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              title: '⚠️ PA Voter Data Update Skipped',
+              body: `The workflow was skipped for the following reason:\n\n${skipReason}\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}`
+            });
+
+  update-data:
+    needs: check-run-conditions
+    if: needs.check-run-conditions.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_LIBS_USER: ${{ github.workspace }}/R/library
+      
+    steps:
+    - uses: actions/checkout@v3
+        
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.2.0'
+        
+    - name: Cache R packages
       uses: actions/cache@v3
       with:
-        path: ~/.local/share/quarto
-        key: ${{ runner.os }}-quarto-${{ hashFiles('**/*.qmd') }}
+        path: ${{ env.R_LIBS_USER }}
+        key: ${{ runner.os }}-r-${{ hashFiles('**/packages.txt') }}-1
+        restore-keys: ${{ runner.os }}-r-
+        
+    - name: Install Quarto
+      uses: quarto-dev/quarto-actions/setup@v2
+      with:
+        version: 1.4.549
         
     - name: Install system dependencies
       run: |
@@ -53,9 +176,38 @@ jobs:
         install.packages(c('tidyverse', 'ggplot2', 'extrafont', 'here', 'openxlsx', 'scales', 'quarto', 'sysfonts', 'showtext'))
       shell: Rscript {0}
         
-    - name: Download latest PA voter data
+- name: Download and check PA voter data
       run: |
-        wget -O "2024 General Daily Mail Ballot Report.xlsx" "https://www.pavoterservices.pa.gov/2024%20General%20Daily%20Mail%20Ballot%20Report.xlsx"
+        # Save old file hash if it exists
+        if [ -f "2024 General Daily Mail Ballot Report.xlsx" ]; then
+          OLD_HASH=$(md5sum "2024 General Daily Mail Ballot Report.xlsx" | awk '{ print $1 }')
+        fi
+        
+        # Download new file to temp location
+        wget -O "temp_ballot_report.xlsx" "https://www.pavoterservices.pa.gov/2024%20General%20Daily%20Mail%20Ballot%20Report.xlsx"
+        NEW_HASH=$(md5sum "temp_ballot_report.xlsx" | awk '{ print $1 }')
+        
+        if [ ! -f "2024 General Daily Mail Ballot Report.xlsx" ] || [ "$OLD_HASH" != "$NEW_HASH" ]; then
+          mv "temp_ballot_report.xlsx" "2024 General Daily Mail Ballot Report.xlsx"
+          echo "New data file detected and saved"
+        else
+          rm "temp_ballot_report.xlsx"
+          echo "no_update=true" >> $GITHUB_ENV
+          echo "::error::No new voter data available - file unchanged"
+          exit 1
+        fi
+
+    - name: Create Issue for Unchanged Data
+      if: failure() && env.no_update == 'true'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.name,
+            title: '⚠️ PA Voter Data Unchanged',
+            body: `The voter data file has not changed since the last update.\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}`
+          });
         
     - name: Render Quarto document
       run: |
@@ -68,3 +220,39 @@ jobs:
         git add docs/* "2024 General Daily Mail Ballot Report.xlsx"
         git commit -m "Update PA voter data $(date +'%Y-%m-%d')" || echo "No changes to commit"
         git push origin main
+        
+    - name: Create Issue on Failure
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.name,
+            title: '❌ PA Voter Data Update Failed',
+            body: `The workflow failed during execution.\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}\n\nPlease check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId}) for more details.`
+          });
+        
+    - name: Render Quarto document
+      run: |
+        quarto render PA_EV_Analysis.qmd --to html -o index.html --output-dir docs
+        
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "actions@github.com"
+        git config --local user.name "GitHub Actions"
+        git add docs/* "2024 General Daily Mail Ballot Report.xlsx"
+        git commit -m "Update PA voter data $(date +'%Y-%m-%d')" || echo "No changes to commit"
+        git push origin main
+
+    - name: Create Issue on Failure
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.name,
+            title: '❌ PA Voter Data Update Failed',
+            body: `The workflow failed during execution.\n\nTriggered by: ${context.eventName}\nTime: ${new Date().toISOString()}\n\nPlease check the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId}) for more details.`
+          });
